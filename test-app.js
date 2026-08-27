@@ -1,7 +1,32 @@
 import InterpolationEditor from './interpolation-editor.js';
+import { createInterpolation3dEditor } from './interpolation-editor-3d.js';
+
+const previewTopology = {
+    points: [
+        [-1.5, -1, -0.7],
+        [1.4, -1.1, -0.4],
+        [1.6, 1.1, 0.8],
+        [-1.2, 1.2, 0.5],
+        [0, 0, 2.1]
+    ],
+    add_simplices: {
+        edges: [
+            { vertices: [0, 1], path: [[-1.5, -1, -0.7], [0, -1.35, -0.5], [1.4, -1.1, -0.4]] },
+            [1, 2], [2, 3], [3, 0], [0, 4], [1, 4], [2, 4], [3, 4]
+        ],
+        faces: [
+            { id: 'front', vertices: [0, 1, 4] },
+            { id: 'right', vertices: [1, 2, 4] },
+            { id: 'back', vertices: [2, 3, 4] },
+            { id: 'left', vertices: [3, 0, 4] },
+            { id: 'base', vertices: [0, 3, 2, 1] }
+        ]
+    }
+};
 
 document.addEventListener('DOMContentLoaded', () => {
     const openEditorButton = document.getElementById('open-editor-button');
+    const open3dEditorButton = document.getElementById('open-3d-editor-button');
     const outputDisplayWrapper = document.getElementById('output-display-wrapper');
     const outputDisplay = document.getElementById('output-display');
     
@@ -49,6 +74,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         editor.initialize();
+
+        const editor3d = createInterpolation3dEditor({
+            getTopology: () => previewTopology
+        });
+        editor3d.mount(document.body);
+        open3dEditorButton.addEventListener('click', () => editor3d.open());
 
         openEditorButton.addEventListener('click', () => {
             editor.show();
