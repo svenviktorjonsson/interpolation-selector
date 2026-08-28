@@ -1,18 +1,15 @@
 /* ========== INTERPOLATION EDITOR (aligned with colormap-selector) ========== */
 /* 6 equal columns: 3 logical columns with equal width ([2|2|2]). */
 
-:root {
-    --editor-bg: #1a202c;
-    --panel-bg: rgba(45, 55, 72, 0.5);
-    --panel-header-bg: #3a4652;
-    --panel-border: #4a5568;
-    --text-primary: #e2e8f0;
-    --text-muted: #a0aec0;
-    --accent: #3b82f6;
-}
-
 .interpolation-editor-container {
-    position: absolute;
+    --editor-bg: var(--selector-bg, #1a202c);
+    --panel-bg: var(--selector-surface, rgba(45, 55, 72, 0.5));
+    --panel-header-bg: var(--selector-surface-strong, #3a4652);
+    --panel-border: var(--selector-border, #4a5568);
+    --text-primary: var(--selector-text, #e2e8f0);
+    --text-muted: var(--selector-muted, #a0aec0);
+    --accent: var(--selector-accent, #3b82f6);
+    position: fixed;
     right: 0.5rem;
     bottom: 0.5rem;
     z-index: 1000;
@@ -20,7 +17,7 @@
     height: 50vh;
     max-width: calc(100% - 1rem);
     min-height: 400px;
-    min-width: 600px;
+    min-width: min(600px, calc(100vw - 1rem));
     background-color: var(--editor-bg);
     border-radius: 0.5rem;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
@@ -28,8 +25,10 @@
     box-sizing: border-box;
     font-family: 'Inter', sans-serif;
     color: var(--text-primary);
-    overflow: visible;
+    overflow: hidden;
 }
+
+.interpolation-editor-container[hidden] { display: none; }
 
 .interpolation-editor-layout {
     display: grid;
@@ -156,6 +155,7 @@
     border-radius: 0.25rem;
     background: transparent;
     border: 1px solid rgba(0, 0, 0, 0.2);
+    touch-action: none;
 }
 
 .preview-card-label {
@@ -368,9 +368,69 @@
 
 @media (max-width: 900px) {
     .interpolation-editor-container {
-        width: calc(100% - 1rem);
-        height: calc(100% - 1rem);
+        position: fixed;
+        inset: max(0.5rem, env(safe-area-inset-top)) max(0.5rem, env(safe-area-inset-right)) max(0.5rem, env(safe-area-inset-bottom)) max(0.5rem, env(safe-area-inset-left));
+        width: auto;
+        height: auto;
+        max-width: none;
+        min-width: 0;
+        min-height: 0;
+        padding: 0.375rem;
     }
+
+    .interpolation-editor-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: none;
+        grid-auto-rows: max-content;
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    .preview-panel,
+    .type-panel,
+    .params-panel,
+    .actions-panel {
+        grid-column: 1;
+        grid-row: auto;
+        max-width: 100%;
+    }
+
+    .preview-panel { min-height: 190px; }
+    .preview-list {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(170px, 72vw);
+        gap: 0.375rem;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scroll-snap-type: x proximity;
+    }
+    .preview-card {
+        min-height: 150px;
+        margin: 0;
+        scroll-snap-align: start;
+    }
+    .type-panel { overflow: visible; }
+    #type-list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.25rem;
+        padding: 0.375rem;
+    }
+    #type-list .toggle-row { margin: 0; min-height: 40px; }
+    .params-panel { overflow: visible; }
+    .actions-panel {
+        position: sticky;
+        bottom: 0;
+        z-index: 2;
+    }
+    .actions-panel .button-container {
+        flex-direction: row;
+        padding-bottom: max(0px, env(safe-area-inset-bottom));
+    }
+    .actions-panel button { min-height: 44px; }
 }
 /* 3D interpolation editor */
 .interpolation-3d-editor {
@@ -386,12 +446,15 @@
   border: 1px solid rgba(148, 163, 184, 0.38);
   border-radius: 14px;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.48);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .interpolation-3d-editor[hidden] { display: none; }
 .interpolation-3d-editor-header,
-.interpolation-3d-editor-controls { display: flex; align-items: center; gap: 12px; }
-.interpolation-3d-editor-header { justify-content: space-between; }
+.interpolation-3d-editor-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-width: 0; }
+.interpolation-3d-editor-header { justify-content: space-between; flex-wrap: nowrap; }
 .interpolation-3d-editor h2,
 .interpolation-3d-editor p { margin: 0; }
 .interpolation-3d-editor-subtitle,
@@ -422,6 +485,8 @@
 }
 .interpolation-3d-editor-canvas {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   height: min(66vh, 540px);
   min-height: 260px;
   display: block;
@@ -429,5 +494,38 @@
   border-radius: 8px;
   cursor: grab;
   touch-action: none;
+  box-sizing: border-box;
 }
 .interpolation-3d-editor-canvas:active { cursor: grabbing; }
+
+@media (max-width: 700px) {
+  .interpolation-3d-editor {
+    inset: max(0.5rem, env(safe-area-inset-top)) max(0.5rem, env(safe-area-inset-right)) max(0.5rem, env(safe-area-inset-bottom)) max(0.5rem, env(safe-area-inset-left));
+    gap: 8px;
+    padding: 10px;
+    grid-template-rows: auto auto minmax(220px, 1fr) auto;
+  }
+  .interpolation-3d-editor-header { align-items: flex-start; min-width: 0; }
+  .interpolation-3d-editor-header > div { min-width: 0; }
+  .interpolation-3d-editor h2 { font-size: 1.05rem; }
+  .interpolation-3d-editor-subtitle { font-size: 0.75rem; line-height: 1.25; }
+  .interpolation-3d-editor-close {
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+  }
+  .interpolation-3d-editor-controls { align-items: stretch; gap: 8px; }
+  .interpolation-3d-editor-controls label {
+    flex: 1 1 145px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+  .interpolation-3d-editor-controls select,
+  .interpolation-3d-editor-fit { min-height: 44px; }
+  .interpolation-3d-editor-fit { flex: 1 0 72px; }
+  .interpolation-3d-editor-canvas {
+    height: 100%;
+    min-height: 220px;
+  }
+}

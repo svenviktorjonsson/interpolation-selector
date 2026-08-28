@@ -111,6 +111,7 @@ function sampleFacePatch(face, u, v) {
     return weightedPoint(points[0], 1 - uu - vv, points[1], uu, points[2], vv);
   }
   if (face.domain === 'quad') {
+    if (uu < -EPSILON || vv < -EPSILON || uu > 1 + EPSILON || vv > 1 + EPSILON) return null;
     return bilinearPoint(points[0], points[1], points[2], points[3], uu, vv);
   }
   return null;
@@ -250,6 +251,7 @@ export function surfaceTriangleNormal(triangle) {
     (b[2] - a[2]) * (c[0] - a[0]) - (b[0] - a[0]) * (c[2] - a[2]),
     (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
   ];
+  if (Math.hypot(normal[0], normal[1], normal[2]) <= EPSILON) return [0, 0, 0];
   return normalize3(normal);
 }
 

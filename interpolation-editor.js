@@ -1,5 +1,6 @@
 // interpolation-editor.js
 import * as C from './constants.js';
+import { applyInputCapabilities, createDialogLifecycle } from 'selector';
 
 const DEFAULT_STYLE = {
     id: null,
@@ -95,11 +96,21 @@ export default class InterpolationEditor {
         this._renderThrottleTimer = null;
         this._pendingRenderAll = false;
         this._pendingRenderPresets = new Set();
+        this.inputCapabilities = null;
+        this.dialogLifecycle = null;
+        this.activePointerId = null;
+        this.fractalPointerId = null;
     }
 
     initialize() {
         if (this.wrapper) return;
         this._initializeDOM();
+        this.inputCapabilities = applyInputCapabilities(this.wrapper, window);
+        this.dialogLifecycle = createDialogLifecycle({
+            root: this.wrapper,
+            documentRef: document,
+            onEscape: () => this.hide()
+        });
         this._setupEventListeners();
         this._initEngineInterpolationBridge();
         this._updateUIFromState();
@@ -109,16 +120,14 @@ export default class InterpolationEditor {
     show(styleToEdit = null) {
         this.state.style = this._normalizeStyle(styleToEdit);
         this._updateUIFromState();
-        this.wrapper.style.display = 'block';
+        this.dialogLifecycle.open();
         requestAnimationFrame(() => {
             this._renderAllPreviews();
         });
     }
 
     hide() {
-        if (this.wrapper) {
-            this.wrapper.style.display = 'none';
-        }
+        this.dialogLifecycle?.close();
     }
 
     _createStyle() {
@@ -169,9 +178,6 @@ export default class InterpolationEditor {
         } else if (inferredType === 'nurbs') {
             inferredType = 'spline';
             inferredHandling = incomingNurbsPointMode === 'mixed' ? 'mixed' : 'control';
-        } else if (inferredType === 'linear') {
-            inferredType = 'spline';
-            inferredHandling = 'anchor';
         } else if (inferredType === 'rel_radius') {
             inferredType = 'radius';
             normalizedRadiusMode = 'relative';
@@ -539,13 +545,22 @@ export default class InterpolationEditor {
             return el;
         };
 
-        this.wrapper = createEl('div', { id: 'interpolation-editor-wrapper', className: 'interpolation-editor-container' });
-        this.wrapper.style.display = 'none';
+        this.wrapper = createEl('div', {
+            id: 'interpolation-editor-wrapper',
+            className: 'selector-shell interpolation-editor-container',
+            attrs: {
+                role: 'dialog',
+                'aria-modal': 'true',
+                'aria-label': 'Interpolation selector',
+                tabindex: '-1',
+                hidden: ''
+            }
+        });
 
-        const layout = createEl('div', { className: 'interpolation-editor-layout' });
+        const layout = createEl('div', { className: 'selector-grid interpolation-editor-layout' });
 
-        const previewPanel = createEl('div', { className: 'editor-panel preview-panel' });
-        previewPanel.append(createEl('div', { className: 'panel-header', text: 'Preview Presets' }));
+        const previewPanel = createEl('div', { className: 'selector-panel editor-panel preview-panel' });
+        previewPanel.append(createEl('div', { className: 'selector-panel-header panel-header', text: 'Preview Presets' }));
         const previewList = createEl('div', { className: 'preview-list' });
 
         PRESET_DEFS.forEach(preset => {
@@ -558,8 +573,8 @@ export default class InterpolationEditor {
         });
         previewPanel.append(previewList);
 
-        const typePanel = createEl('div', { className: 'editor-panel type-panel' });
-        typePanel.append(createEl('div', { className: 'panel-header', text: 'Interpolation Type' }));
+        const typePanel = createEl('div', { className: 'selector-panel editor-panel type-panel' });
+        typePanel.append(createEl('div', { className: 'selector-panel-header panel-header', text: 'Interpolation Type' }));
         const typeList = createEl('div', { className: 'toggle-stack', id: 'type-list' });
         TYPE_OPTIONS.forEach(option => {
             const button = createEl('button', {
@@ -571,8 +586,8 @@ export default class InterpolationEditor {
         });
         typePanel.append(typeList);
 
-        const paramsPanel = createEl('div', { className: 'editor-panel params-panel' });
-        paramsPanel.append(createEl('div', { className: 'panel-header', text: 'Parameters' }));
+        const paramsPanel = createEl('div', { className: 'selector-panel editor-panel params-panel' });
+        paramsPanel.append(createEl('div', { className: 'selector-panel-header panel-header', text: 'Parameters' }));
         const tensionSection = createEl('div', { className: 'param-section', id: 'tension-section' });
         tensionSection.append(createEl('div', { className: 'section-caption', text: 'Catmull-Rom tension.' }));
         const tensionRow = createEl('div', { className: 'param-row' });
@@ -722,11 +737,11 @@ export default class InterpolationEditor {
 
         paramsPanel.append(linearSection, arrowEndSection, handlingSection, tensionSection, radiusSection, smoothingSection, nurbsSection, fractalSection);
 
-        const actionsPanel = createEl('div', { className: 'editor-panel actions-panel' });
-        actionsPanel.append(createEl('div', { className: 'panel-header', text: 'Actions' }));
+        const actionsPanel = createEl('div', { className: 'selector-panel editor-panel actions-panel' });
+        actionsPanel.append(createEl('div', { className: 'selector-panel-header panel-header', text: 'Actions' }));
         const buttonContainer = createEl('div', { className: 'button-container' });
-        this.elements.closeButton = createEl('button', { id: 'close-button', className: 'close-button', text: 'Close', attrs: { type: 'button' } });
-        this.elements.selectButton = createEl('button', { id: 'select-button', className: 'select-button', text: 'Select', attrs: { type: 'button' } });
+        this.elements.closeButton = createEl('button', { id: 'close-button', className: 'selector-control close-button', text: 'Close', attrs: { type: 'button', 'data-selector-initial-focus': '' } });
+        this.elements.selectButton = createEl('button', { id: 'select-button', className: 'selector-control select-button', text: 'Select', attrs: { type: 'button' } });
         buttonContainer.append(this.elements.closeButton, this.elements.selectButton);
         actionsPanel.append(buttonContainer);
 
@@ -746,8 +761,12 @@ export default class InterpolationEditor {
             cardInfo.card.addEventListener('click', () => {
                 this._setStyle({ preset });
             });
-            cardInfo.canvas.addEventListener('mousedown', (event) => {
+            cardInfo.canvas.addEventListener('pointerdown', (event) => {
                 this._handlePreviewMouseDown(event, preset);
+                if (this.dragState.presetId !== null) {
+                    this.activePointerId = event.pointerId;
+                    cardInfo.canvas.setPointerCapture?.(event.pointerId);
+                }
             });
         });
 
@@ -859,10 +878,12 @@ export default class InterpolationEditor {
                 this._applyFractalPointCount(Number(button.dataset.fractalCount));
             });
         });
-        this.elements.fractalCanvas.addEventListener('mousedown', (event) => {
+        this.elements.fractalCanvas.addEventListener('pointerdown', (event) => {
             const idx = this._findFractalControlHit(event);
             if (idx !== null) {
                 this.fractalDragIndex = idx;
+                this.fractalPointerId = event.pointerId;
+                this.elements.fractalCanvas.setPointerCapture?.(event.pointerId);
                 this.fractalSnapFractions = new Array(this.state.style.fractalPointCount).fill(null);
                 event.preventDefault();
             }
@@ -877,9 +898,9 @@ export default class InterpolationEditor {
             this.hide();
         });
 
-        window.addEventListener('mousemove', (event) => {
-            this._handlePreviewMouseMove(event);
-            if (this.fractalDragIndex !== null) {
+        window.addEventListener('pointermove', (event) => {
+            if (this.activePointerId === event.pointerId) this._handlePreviewMouseMove(event);
+            if (this.fractalDragIndex !== null && this.fractalPointerId === event.pointerId) {
                 const controls = this.state.style.fractalControlPoints.map((pt) => ({ ...pt }));
                 const next = this._fractalControlFromMouse(event, this.fractalDragIndex, controls);
                 if (next) {
@@ -896,11 +917,19 @@ export default class InterpolationEditor {
                 }
             }
         });
-        window.addEventListener('mouseup', () => {
-            this._handlePreviewMouseUp();
-            this.fractalDragIndex = null;
+        const endPointerInteraction = (event) => {
+            if (this.activePointerId === event.pointerId) {
+                this._handlePreviewMouseUp();
+                this.activePointerId = null;
+            }
+            if (this.fractalPointerId === event.pointerId) {
+                this.fractalDragIndex = null;
+                this.fractalPointerId = null;
+            }
             this._flushPendingPreviewRender();
-        });
+        };
+        window.addEventListener('pointerup', endPointerInteraction);
+        window.addEventListener('pointercancel', endPointerInteraction);
     }
 
     _setStyle(next) {
@@ -1458,7 +1487,7 @@ export default class InterpolationEditor {
         const x0 = pad;
         const x1 = canvas.width - pad;
         const yMid = canvas.height / 2;
-        const hitRadius = 8;
+        const hitRadius = this.wrapper?.dataset.inputCoarse === 'true' ? 14 : 8;
         const controls = this.state.style.fractalControlPoints || [];
         for (let i = 0; i < controls.length; i++) {
             const cx = x0 + (x1 - x0) * controls[i].u;
@@ -2845,7 +2874,7 @@ export default class InterpolationEditor {
         const padding = 16;
         const usableW = rect.width - padding * 2;
         const usableH = rect.height - padding * 2;
-        const hitRadius = 8;
+        const hitRadius = this.wrapper?.dataset.inputCoarse === 'true' ? 14 : 8;
 
         const presetData = this.state.previewPoints[presetId];
         if (presetData && presetData.in && presetData.out) {

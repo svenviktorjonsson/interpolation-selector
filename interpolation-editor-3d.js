@@ -1,5 +1,6 @@
 import { createDomElement } from './dom-element.js';
 import { createInterpolation3dModel, surfaceLightIntensity } from './interpolation-3d.js';
+import { applyInputCapabilities, createDialogLifecycle } from 'selector';
 
 const FACE_COLORS = ['#67e8f9', '#a78bfa', '#fbbf24', '#86efac', '#f9a8d4'];
 
@@ -22,14 +23,18 @@ export function createInterpolation3dEditor({
   let selectedFaceId = '';
   let camera = { yaw: -0.62, pitch: 0.42, zoom: 1 };
   let drag = null;
+  let dialogLifecycle = null;
+  let inputCapabilities = null;
 
   function mount(target = documentRef?.body) {
     if (root) return root;
     if (!documentRef || !target) throw new Error('3D interpolation editor needs a document target.');
     root = createDomElement(documentRef, 'section', {
-      className: 'interpolation-3d-editor',
+      className: 'selector-shell interpolation-3d-editor',
       hidden: true,
       role: 'dialog',
+      'aria-modal': 'true',
+      tabindex: '-1',
       'aria-label': '3D interpolation editor'
     }, [
       createDomElement(documentRef, 'div', { className: 'interpolation-3d-editor-header' }, [
@@ -46,6 +51,7 @@ export function createInterpolation3dEditor({
           text: '×',
           title: 'Close 3D interpolation editor',
           'aria-label': 'Close 3D interpolation editor',
+          'data-selector-initial-focus': '',
           onClick: close
         })
       ]),
@@ -61,7 +67,8 @@ export function createInterpolation3dEditor({
         ]),
         createDomElement(documentRef, 'label', { text: 'Continuity target' }, [
           continuitySelect = createDomElement(documentRef, 'select', {
-            'aria-label': 'Continuity target'
+            'aria-label': 'Continuity target',
+            onChange: render
           }, [
             createDomElement(documentRef, 'option', { value: 'G0', text: 'G0 — position' }),
             createDomElement(documentRef, 'option', { value: 'G1', text: 'G1 — tangent plane' }),
@@ -90,12 +97,15 @@ export function createInterpolation3dEditor({
       })
     ]);
     target.append(root);
+    inputCapabilities = applyInputCapabilities(root, documentRef.defaultView || globalThis);
+    dialogLifecycle = createDialogLifecycle({ root, documentRef, onEscape: close });
     installCanvasHandlers();
     return root;
   }
 
   function installCanvasHandlers() {
     canvas.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
       canvas.setPointerCapture?.(event.pointerId);
       drag = { x: event.clientX, y: event.clientY };
     });
@@ -118,12 +128,13 @@ export function createInterpolation3dEditor({
 
   function open() {
     mount();
-    root.hidden = false;
+    dialogLifecycle.open();
     refresh();
   }
 
   function close() {
-    if (root) root.hidden = true;
+    drag = null;
+    dialogLifecycle?.close();
     onClose();
   }
 
@@ -232,6 +243,8 @@ export function createInterpolation3dEditor({
   }
 
   function destroy() {
+    dialogLifecycle?.destroy();
+    inputCapabilities?.destroy();
     root?.remove();
     root = null;
     canvas = null;
@@ -239,6 +252,8 @@ export function createInterpolation3dEditor({
     continuitySelect = null;
     status = null;
     model = null;
+    dialogLifecycle = null;
+    inputCapabilities = null;
   }
 
   return Object.freeze({ mount, open, close, refresh, destroy });

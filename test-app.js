@@ -1,4 +1,4 @@
-import InterpolationEditor from './interpolation-editor.js';
+import InterpolationEditor from './interpolation-selector.js';
 import { createInterpolation3dEditor } from './interpolation-editor-3d.js';
 
 const previewTopology = {

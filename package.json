@@ -1,20 +1,44 @@
 {
-  "name": "interpolation-editor",
+  "name": "interpolation-selector",
   "version": "1.0.0",
   "description": "a popup for editing interpolation styles",
-  "homepage": "https://github.com/svenviktorjonsson/interpolation-editor#readme",
+  "homepage": "https://github.com/svenviktorjonsson/interpolation-selector#readme",
   "bugs": {
-    "url": "https://github.com/svenviktorjonsson/interpolation-editor/issues"
+    "url": "https://github.com/svenviktorjonsson/interpolation-selector/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/svenviktorjonsson/interpolation-editor.git"
+    "url": "git+https://github.com/svenviktorjonsson/interpolation-selector.git"
   },
   "license": "MIT",
   "author": "Viktor Jonsson",
-  "type": "commonjs",
-  "main": "interpolation-editor.js",
+  "type": "module",
+  "main": "interpolation-selector.js",
+  "exports": {
+    ".": "./interpolation-selector.js",
+    "./interpolation-selector": "./interpolation-selector.js",
+    "./interpolation-editor": "./interpolation-editor.js",
+    "./interpolation-editor.js": "./interpolation-editor.js",
+    "./3d": "./interpolation-editor-3d.js",
+    "./style.css": "./style.css"
+  },
+  "files": [
+    "constants.js",
+    "dom-element.js",
+    "interpolation-3d.js",
+    "interpolation-editor-3d.js",
+    "interpolation-editor.js",
+    "interpolation-selector.js",
+    "style.css",
+    "utils.js"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "selector": "github:svenviktorjonsson/selector"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.7"
   }
 }

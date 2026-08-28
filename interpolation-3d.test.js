@@ -47,6 +47,8 @@ describe('3D interpolation model', () => {
     expect(model.sampleFace(face.id, 0, 0)).toEqual([0, 0, 0]);
     expect(model.sampleFace(face.id, 1, 1)).toEqual([2, 2, 1]);
     expect(model.sampleFace(face.id, 0.5, 0.5)).toEqual([1, 1, 0.5]);
+    expect(model.sampleFace(face.id, -0.01, 0.5)).toBeNull();
+    expect(model.sampleFace(face.id, 0.5, 1.01)).toBeNull();
   });
 
   it('uses a deterministic center fan for an n-sided preview surface', () => {
@@ -109,6 +111,7 @@ describe('3D interpolation model', () => {
     );
     expect(surfaceLightIntensity(triangle, [0, 0, 1])).toBeGreaterThanOrEqual(0.18);
     expect(surfaceLightIntensity(triangle, [0, 0, 1])).toBeLessThanOrEqual(1);
+    expect(surfaceLightIntensity([[0, 0, 0], [0, 0, 0], [0, 0, 0]], [0, 0, 1])).toBe(0.18);
   });
 
   it('keeps supplied curved edge samples in their dedicated cuts and Face boundary', () => {
